@@ -2,6 +2,7 @@ import { pgTable, uuid, varchar, timestamp, text, pgEnum, integer } from "drizzl
 
 export const roleEnum = pgEnum("role", ["USER", "ADMIN"]);
 export const uploadStatusEnum = pgEnum("upload_status", ["PENDING", "PROCESSING", "READY", "FAILED"]);
+export const senderEnum = pgEnum("sender", ["USER", "ASSISTANT"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -28,4 +29,27 @@ export const documents = pgTable("documents", {
   uploadStatus: uploadStatusEnum("upload_status").default("PENDING").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const conversations = pgTable("conversations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  documentId: uuid("document_id")
+    .notNull()
+    .references(() => documents.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const messages = pgTable("messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  conversationId: uuid("conversation_id")
+    .notNull()
+    .references(() => conversations.id, { onDelete: "cascade" }),
+  sender: senderEnum("sender").notNull(),
+  content: text("content").notNull(),
+  tokens: integer("tokens"),
+  latency: integer("latency"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });

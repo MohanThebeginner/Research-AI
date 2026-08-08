@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 
 export default function DocumentsPage() {
@@ -75,7 +76,9 @@ export default function DocumentsPage() {
             className="flex items-center justify-between rounded border p-3"
           >
             <div>
-              <p className="font-medium">{doc.originalName}</p>
+              <Link href={`/documents/${doc.id}`} className="font-medium underline">
+                {doc.originalName}
+              </Link>
               <p className="text-sm text-gray-500">{doc.uploadStatus}</p>
             </div>
             <button className="text-red-500" onClick={() => handleDelete(doc.id)}>

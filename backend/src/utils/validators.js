@@ -14,3 +14,7 @@ export const loginSchema = z.object({
 export const renameDocumentSchema = z.object({
   originalName: z.string().min(1).max(255),
 });
+
+export const chatSchema = z.object({
+  message: z.string().min(1).max(2000),
+});

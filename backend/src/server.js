@@ -4,6 +4,8 @@ import multipart from "@fastify/multipart";
 import "dotenv/config";
 import { authRoutes } from "./routes/authRoutes.js";
 import { documentRoutes } from "./routes/documentRoutes.js";
+import { aiRoutes } from "./routes/aiRoutes.js";
+import { dashboardRoutes } from "./routes/dashboardRoutes.js";
 
 const app = Fastify({ logger: true });
 
@@ -27,6 +29,8 @@ app.get("/healthcheck", async () => {
 
 await app.register(authRoutes);
 await app.register(documentRoutes);
+await app.register(aiRoutes);
+await app.register(dashboardRoutes);
 
 const start = async () => {
   try {
