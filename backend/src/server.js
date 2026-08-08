@@ -1,12 +1,20 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import "dotenv/config";
 import { authRoutes } from "./routes/authRoutes.js";
+import { documentRoutes } from "./routes/documentRoutes.js";
 
 const app = Fastify({ logger: true });
 
 await app.register(cors, {
   origin: process.env.FRONTEND_URL || "http://localhost:3000",
+});
+
+await app.register(multipart, {
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
 });
 
 app.get("/healthcheck", async () => {
@@ -18,6 +26,7 @@ app.get("/healthcheck", async () => {
 });
 
 await app.register(authRoutes);
+await app.register(documentRoutes);
 
 const start = async () => {
   try {

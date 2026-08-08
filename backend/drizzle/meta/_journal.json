@@ -8,6 +8,13 @@
       "when": 1786128214406,
       "tag": "0000_dark_jigsaw",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786172556314,
+      "tag": "0001_broken_human_torch",
+      "breakpoints": true
     }
   ]
 }
