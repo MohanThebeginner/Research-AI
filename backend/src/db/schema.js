@@ -23,7 +23,12 @@ export const vector = customType({
 });
 
 export const roleEnum = pgEnum("role", ["USER", "ADMIN"]);
-export const uploadStatusEnum = pgEnum("upload_status", ["PENDING", "PROCESSING", "READY", "FAILED"]);
+export const uploadStatusEnum = pgEnum("upload_status", [
+  "PENDING",
+  "PROCESSING",
+  "READY",
+  "FAILED",
+]);
 export const senderEnum = pgEnum("sender", ["USER", "ASSISTANT"]);
 
 export const users = pgTable("users", {
@@ -45,7 +50,8 @@ export const documents = pgTable("documents", {
   originalName: varchar("original_name", { length: 255 }).notNull(),
   fileType: varchar("file_type", { length: 100 }).notNull(),
   size: integer("size").notNull(),
-  storagePath: text("storage_path").notNull(),
+  storageUrl: text("storage_url").notNull(),
+  cloudinaryPublicId: text("cloudinary_public_id").notNull(),
   extractedText: text("extracted_text"),
   summary: text("summary"),
   uploadStatus: uploadStatusEnum("upload_status").default("PENDING").notNull(),

@@ -59,14 +59,18 @@ export default function DocumentsPage() {
         <p className="mb-1 font-mono text-xs uppercase tracking-widest text-primary">
           Library
         </p>
-        <h1 className="mb-8 font-display text-3xl font-semibold text-ink">Documents</h1>
+        <h1 className="mb-8 font-display text-3xl font-semibold text-ink">
+          Documents
+        </h1>
 
         <Card className="mb-8">
           <form onSubmit={handleUpload} className="flex flex-col gap-3">
-            <label className="text-sm font-medium text-ink">Upload a document</label>
+            <label className="text-sm font-medium text-ink">
+              Upload a PDF or TXT document
+            </label>
             <input
               type="file"
-              accept=".pdf,.txt,.docx"
+              accept=".pdf,.txt"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
               className="text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary"
             />
@@ -79,11 +83,16 @@ export default function DocumentsPage() {
 
         <div className="flex flex-col gap-2">
           {documents.length === 0 && (
-            <p className="text-sm text-muted">No documents yet. Upload your first one above.</p>
+            <p className="text-sm text-muted">
+              No documents yet. Upload your first one above.
+            </p>
           )}
           {documents.map((doc) => (
             <Card key={doc.id} className="flex items-center justify-between">
-              <Link href={`/documents/${doc.id}`} className="flex items-center gap-3">
+              <Link
+                href={`/documents/${doc.id}`}
+                className="flex items-center gap-3"
+              >
                 <span className="text-sm font-medium text-ink hover:text-primary">
                   {doc.originalName}
                 </span>

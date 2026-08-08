@@ -1,73 +1,114 @@
-import fs from "fs/promises";
-import path from "path";
+import {
+  uploadDocument as uploadToCloudinary,
+  deleteDocumentFile,
+} from "../services/storageService.js";
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { documents } from "../db/schema.js";
 import { extractText } from "../utils/fileExtractor.js";
 import { renameDocumentSchema } from "../utils/validators.js";
 
-const ALLOWED_MIME_TYPES = [
-  "text/plain",
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
+const ALLOWED_MIME_TYPES = ["text/plain", "application/pdf"];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_EXTRACTED_TEXT_LENGTH = 30_000;
 
 export const uploadDocument = async (request, reply) => {
   const data = await request.file();
 
   if (!data) {
-    return reply.status(400).send({ message: "No file uploaded" });
+    return reply.status(400).send({
+      message: "No file uploaded",
+    });
   }
 
   if (!ALLOWED_MIME_TYPES.includes(data.mimetype)) {
-    return reply.status(400).send({ message: "Unsupported file type" });
+    return reply.status(400).send({
+      message: "Unsupported file type. Only PDF and TXT files are allowed.",
+    });
   }
 
   const buffer = await data.toBuffer();
 
   if (buffer.length > MAX_FILE_SIZE) {
-    return reply.status(400).send({ message: "File too large, max 10MB" });
+    return reply.status(400).send({
+      message: "File too large. Maximum file size is 10MB.",
+    });
   }
 
-  const uniqueName = `${Date.now()}-${data.filename}`;
-  const storagePath = path.join("uploads", uniqueName);
-
-  await fs.mkdir("uploads", { recursive: true });
-  await fs.writeFile(storagePath, buffer);
-
-  let extractedText = "";
-  let uploadStatus = "READY";
+  let extractedText;
 
   try {
-    extractedText = await extractText(storagePath, data.mimetype);
-  } catch (err) {
-    uploadStatus = "FAILED";
+    extractedText = await extractText(buffer, data.mimetype);
+  } catch (error) {
+    request.log.error(error);
+
+    return reply.status(400).send({
+      message: "Failed to extract text from document.",
+    });
   }
 
-  const newDocument = await db
-    .insert(documents)
-    .values({
-      ownerId: request.user.id,
-      filename: uniqueName,
-      originalName: data.filename,
-      fileType: data.mimetype,
-      size: buffer.length,
-      storagePath,
-      extractedText,
-      uploadStatus,
-    })
-    .returning({
-      id: documents.id,
-      originalName: documents.originalName,
-      fileType: documents.fileType,
-      size: documents.size,
-      uploadStatus: documents.uploadStatus,
-      createdAt: documents.createdAt,
+  extractedText = extractedText.trim();
+
+  if (!extractedText) {
+    return reply.status(400).send({
+      message: "The document does not contain readable text.",
+    });
+  }
+
+  if (extractedText.length > MAX_EXTRACTED_TEXT_LENGTH) {
+    return reply.status(400).send({
+      message:
+        "Document is too large to process. Please upload a document with no more than 30,000 characters of extracted text.",
+    });
+  }
+
+  let storage;
+
+  try {
+    storage = await uploadToCloudinary(buffer, data.filename);
+  } catch (error) {
+    request.log.error(error);
+
+    return reply.status(500).send({
+      message: "Failed to store document.",
+    });
+  }
+
+  try {
+    const newDocument = await db
+      .insert(documents)
+      .values({
+        ownerId: request.user.id,
+        filename: data.filename,
+        originalName: data.filename,
+        fileType: data.mimetype,
+        size: buffer.length,
+        storageUrl: storage.url,
+        cloudinaryPublicId: storage.publicId,
+        extractedText,
+        uploadStatus: "READY",
+      })
+      .returning({
+        id: documents.id,
+        originalName: documents.originalName,
+        fileType: documents.fileType,
+        size: documents.size,
+        uploadStatus: documents.uploadStatus,
+        createdAt: documents.createdAt,
+      });
+
+    return reply.status(201).send({
+      document: newDocument[0],
+    });
+  } catch (error) {
+    // Prevent orphaned Cloudinary files if DB insertion fails.
+    await deleteDocumentFile(storage.publicId).catch((cleanupError) => {
+      request.log.error(cleanupError);
     });
 
-  return reply.status(201).send({ document: newDocument[0] });
+    throw error;
+  }
 };
 
 export const getDocuments = async (request, reply) => {
@@ -143,7 +184,7 @@ export const deleteDocument = async (request, reply) => {
     return reply.status(404).send({ message: "Document not found" });
   }
 
-  await fs.unlink(existing[0].storagePath).catch(() => {});
+  await deleteDocumentFile(existing[0].cloudinaryPublicId);
 
   await db.delete(documents).where(eq(documents.id, id));
 
