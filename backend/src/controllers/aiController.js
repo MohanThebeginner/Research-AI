@@ -1,7 +1,8 @@
 import { eq, and, asc } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { documents, conversations, messages } from "../db/schema.js";
-import { geminiModel } from "../config/gemini.js";
+import { ai, GEMINI_MODEL } from "../config/gemini.js";
+import { retrieveRelevantChunks } from "../services/embeddingService.js";
 import { chatSchema } from "../utils/validators.js";
 
 const MAX_CONTEXT_CHARS = 12000;
@@ -36,8 +37,11 @@ Document:
 ${document.extractedText.slice(0, MAX_CONTEXT_CHARS)}`;
 
   try {
-    const result = await geminiModel.generateContent(prompt);
-    const summary = result.response.text();
+    const result = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: prompt,
+    });
+    const summary = result.text;
 
     await db
       .update(documents)
@@ -47,6 +51,13 @@ ${document.extractedText.slice(0, MAX_CONTEXT_CHARS)}`;
     return reply.status(200).send({ summary });
   } catch (err) {
     request.log.error(err);
+
+    if (err.status === 429) {
+      return reply
+        .status(429)
+        .send({ message: "AI service is rate limited right now, please try again shortly" });
+    }
+
     return reply.status(500).send({ message: "Failed to generate summary" });
   }
 };
@@ -102,10 +113,21 @@ export const chatWithDocument = async (request, reply) => {
 
   const historyText = pastMessages.map((m) => `${m.sender}: ${m.content}`).join("\n");
 
-  const prompt = `You are answering questions about the following document. Use only information from the document to answer. If the answer is not in the document, say so clearly.
+  let contextText;
+  let usedRag = false;
 
-Document:
-${document.extractedText.slice(0, MAX_CONTEXT_CHARS)}
+  if (document.isIndexed) {
+    const relevantChunks = await retrieveRelevantChunks(documentId, message);
+    contextText = relevantChunks.map((c) => c.chunkText).join("\n\n---\n\n");
+    usedRag = true;
+  } else {
+    contextText = document.extractedText.slice(0, MAX_CONTEXT_CHARS);
+  }
+
+  const prompt = `You are answering questions about the following document excerpts. Use only information from these excerpts to answer. If the answer is not present, say so clearly.
+
+Document excerpts:
+${contextText}
 
 Conversation so far:
 ${historyText}
@@ -115,8 +137,11 @@ User question: ${message}`;
   const startTime = Date.now();
 
   try {
-    const result = await geminiModel.generateContent(prompt);
-    const answer = result.response.text();
+    const result = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: prompt,
+    });
+    const answer = result.text;
     const latency = Date.now() - startTime;
 
     await db.insert(messages).values({
@@ -132,9 +157,16 @@ User question: ${message}`;
       latency,
     });
 
-    return reply.status(200).send({ answer });
+    return reply.status(200).send({ answer, usedRag });
   } catch (err) {
     request.log.error(err);
+
+    if (err.status === 429) {
+      return reply
+        .status(429)
+        .send({ message: "AI service is rate limited right now, please try again shortly" });
+    }
+
     return reply.status(500).send({ message: "Failed to generate response" });
   }
 };

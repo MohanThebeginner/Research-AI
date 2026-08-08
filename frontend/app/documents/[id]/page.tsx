@@ -9,9 +9,12 @@ export default function DocumentDetailPage() {
   const [document, setDocument] = useState<any>(null);
   const [summary, setSummary] = useState("");
   const [summarizing, setSummarizing] = useState(false);
+  const [summarizeError, setSummarizeError] = useState("");
+  const [indexing, setIndexing] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState(false);
+  const [chatError, setChatError] = useState("");
 
   const fetchDocument = async () => {
     const res = await api.get(`/api/v1/documents/${id}`);
@@ -31,11 +34,24 @@ export default function DocumentDetailPage() {
 
   const handleSummarize = async () => {
     setSummarizing(true);
+    setSummarizeError("");
     try {
       const res = await api.post(`/api/v1/ai/summarize/${id}`);
       setSummary(res.data.summary);
+    } catch (err: any) {
+      setSummarizeError(err.response?.data?.message || "Something went wrong, please try again");
     } finally {
       setSummarizing(false);
+    }
+  };
+
+  const handleIndex = async () => {
+    setIndexing(true);
+    try {
+      await api.post(`/api/v1/documents/${id}/index`);
+      fetchDocument();
+    } finally {
+      setIndexing(false);
     }
   };
 
@@ -44,10 +60,14 @@ export default function DocumentDetailPage() {
     if (!question.trim()) return;
 
     setAsking(true);
+    setChatError("");
+
     try {
       await api.post(`/api/v1/ai/chat/${id}`, { message: question });
       setQuestion("");
       fetchHistory();
+    } catch (err: any) {
+      setChatError(err.response?.data?.message || "Something went wrong, please try again");
     } finally {
       setAsking(false);
     }
@@ -62,6 +82,25 @@ export default function DocumentDetailPage() {
       <h1 className="text-2xl font-bold">{document.originalName}</h1>
 
       <div className="w-full max-w-2xl">
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            className="rounded bg-black p-2 text-white disabled:opacity-50"
+            onClick={handleIndex}
+            disabled={indexing || document.isIndexed}
+          >
+            {document.isIndexed
+              ? "Indexed for RAG"
+              : indexing
+              ? "Indexing..."
+              : "Index for RAG"}
+          </button>
+          {document.isIndexed && (
+            <span className="text-sm text-green-600">
+              Chat answers now use retrieved chunks, not the full document
+            </span>
+          )}
+        </div>
+
         <button
           className="rounded bg-black p-2 text-white disabled:opacity-50"
           onClick={handleSummarize}
@@ -73,6 +112,8 @@ export default function DocumentDetailPage() {
         {summary && (
           <div className="mt-4 whitespace-pre-wrap rounded border p-4">{summary}</div>
         )}
+
+        {summarizeError && <p className="mt-2 text-red-500">{summarizeError}</p>}
       </div>
 
       <div className="w-full max-w-2xl">
@@ -107,6 +148,8 @@ export default function DocumentDetailPage() {
             {asking ? "Asking..." : "Ask"}
           </button>
         </form>
+
+        {chatError && <p className="mt-2 text-red-500">{chatError}</p>}
       </div>
     </main>
   );

@@ -1,4 +1,26 @@
-import { pgTable, uuid, varchar, timestamp, text, pgEnum, integer } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  varchar,
+  timestamp,
+  text,
+  pgEnum,
+  integer,
+  boolean,
+  customType,
+} from "drizzle-orm/pg-core";
+
+export const vector = customType({
+  dataType() {
+    return "vector(768)";
+  },
+  toDriver(value) {
+    return `[${value.join(",")}]`;
+  },
+  fromDriver(value) {
+    return value.slice(1, -1).split(",").map(Number);
+  },
+});
 
 export const roleEnum = pgEnum("role", ["USER", "ADMIN"]);
 export const uploadStatusEnum = pgEnum("upload_status", ["PENDING", "PROCESSING", "READY", "FAILED"]);
@@ -27,6 +49,7 @@ export const documents = pgTable("documents", {
   extractedText: text("extracted_text"),
   summary: text("summary"),
   uploadStatus: uploadStatusEnum("upload_status").default("PENDING").notNull(),
+  isIndexed: boolean("is_indexed").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -51,5 +74,16 @@ export const messages = pgTable("messages", {
   content: text("content").notNull(),
   tokens: integer("tokens"),
   latency: integer("latency"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const embeddings = pgTable("embeddings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  documentId: uuid("document_id")
+    .notNull()
+    .references(() => documents.id, { onDelete: "cascade" }),
+  chunkText: text("chunk_text").notNull(),
+  chunkIndex: integer("chunk_index").notNull(),
+  embedding: vector("embedding"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
