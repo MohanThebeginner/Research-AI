@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
+import AppShell from "@/components/AppShell";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import StatusTag from "@/components/ui/StatusTag";
 
 export default function DocumentDetailPage() {
   const { id } = useParams();
@@ -74,83 +79,91 @@ export default function DocumentDetailPage() {
   };
 
   if (!document) {
-    return <p className="flex min-h-screen items-center justify-center">Loading...</p>;
+    return <p className="flex min-h-screen items-center justify-center text-muted">Loading...</p>;
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center gap-8 p-8">
-      <h1 className="text-2xl font-bold">{document.originalName}</h1>
-
-      <div className="w-full max-w-2xl">
-        <div className="mb-4 flex items-center gap-3">
-          <button
-            className="rounded bg-black p-2 text-white disabled:opacity-50"
-            onClick={handleIndex}
-            disabled={indexing || document.isIndexed}
-          >
-            {document.isIndexed
-              ? "Indexed for RAG"
-              : indexing
-              ? "Indexing..."
-              : "Index for RAG"}
-          </button>
-          {document.isIndexed && (
-            <span className="text-sm text-green-600">
-              Chat answers now use retrieved chunks, not the full document
-            </span>
-          )}
+    <AppShell>
+      <div className="mx-auto max-w-3xl px-8 py-10">
+        <p className="mb-1 font-mono text-xs uppercase tracking-widest text-primary">
+          Document
+        </p>
+        <div className="mb-8 flex items-center gap-3">
+          <h1 className="font-display text-3xl font-semibold text-ink">
+            {document.originalName}
+          </h1>
+          <StatusTag status={document.uploadStatus} />
         </div>
 
-        <button
-          className="rounded bg-black p-2 text-white disabled:opacity-50"
-          onClick={handleSummarize}
-          disabled={summarizing}
-        >
-          {summarizing ? "Summarizing..." : "Generate Summary"}
-        </button>
-
-        {summary && (
-          <div className="mt-4 whitespace-pre-wrap rounded border p-4">{summary}</div>
-        )}
-
-        {summarizeError && <p className="mt-2 text-red-500">{summarizeError}</p>}
-      </div>
-
-      <div className="w-full max-w-2xl">
-        <h2 className="mb-2 text-xl font-semibold">Ask a question</h2>
-
-        <div className="mb-4 flex flex-col gap-2">
-          {messages.map((m) => (
-            <div
-              key={m.id}
-              className={`rounded p-2 ${
-                m.sender === "USER" ? "self-end bg-gray-100" : "bg-blue-50"
-              }`}
-            >
-              <p className="text-xs text-gray-500">{m.sender}</p>
-              <p>{m.content}</p>
+        <Card className="mb-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-display text-lg font-semibold text-ink">Summary</h2>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleIndex}
+                disabled={indexing || document.isIndexed}
+                className="font-mono text-xs uppercase tracking-wider text-primary hover:underline disabled:cursor-default disabled:text-muted disabled:no-underline"
+              >
+                {document.isIndexed ? "Indexed for RAG" : indexing ? "Indexing..." : "Index for RAG"}
+              </button>
+              <Button variant="secondary" onClick={handleSummarize} disabled={summarizing}>
+                {summarizing ? "Summarizing..." : "Generate Summary"}
+              </Button>
             </div>
-          ))}
-        </div>
+          </div>
 
-        <form onSubmit={handleAsk} className="flex gap-2">
-          <input
-            className="flex-1 rounded border p-2"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask something about this document"
-          />
-          <button
-            className="rounded bg-black p-2 text-white disabled:opacity-50"
-            type="submit"
-            disabled={asking}
-          >
-            {asking ? "Asking..." : "Ask"}
-          </button>
-        </form>
+          {summary && (
+            <p className="whitespace-pre-wrap border-l-2 border-primary pl-4 text-sm leading-relaxed text-ink">
+              {summary}
+            </p>
+          )}
+          {!summary && (
+            <p className="text-sm text-muted">No summary yet. Generate one above.</p>
+          )}
+          {summarizeError && <p className="mt-3 text-sm text-danger">{summarizeError}</p>}
+        </Card>
 
-        {chatError && <p className="mt-2 text-red-500">{chatError}</p>}
+        <Card>
+          <h2 className="mb-4 font-display text-lg font-semibold text-ink">Ask a question</h2>
+
+          <div className="mb-4 flex flex-col gap-3">
+            {messages.length === 0 && (
+              <p className="text-sm text-muted">
+                No questions yet. Ask something about this document below.
+              </p>
+            )}
+            {messages.map((m) => (
+              <div
+                key={m.id}
+                className={
+                  m.sender === "USER"
+                    ? "ml-auto max-w-[80%] rounded-md bg-primary-soft px-3 py-2 text-sm text-ink"
+                    : "max-w-[85%] border-l-2 border-accent bg-accent-soft px-3 py-2 text-sm text-ink"
+                }
+              >
+                <p className="mb-1 font-mono text-xs uppercase tracking-wider text-muted">
+                  {m.sender === "USER" ? "You" : "ResearchAI"}
+                </p>
+                <p className="whitespace-pre-wrap">{m.content}</p>
+              </div>
+            ))}
+          </div>
+
+          <form onSubmit={handleAsk} className="flex gap-2">
+            <Input
+              className="flex-1"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder="Ask something about this document"
+            />
+            <Button type="submit" disabled={asking}>
+              {asking ? "Asking..." : "Ask"}
+            </Button>
+          </form>
+
+          {chatError && <p className="mt-3 text-sm text-danger">{chatError}</p>}
+        </Card>
       </div>
-    </main>
+    </AppShell>
   );
 }

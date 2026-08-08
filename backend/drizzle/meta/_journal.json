@@ -15,6 +15,20 @@
       "when": 1786172556314,
       "tag": "0001_broken_human_torch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786175002267,
+      "tag": "0002_faithful_korvac",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786197721833,
+      "tag": "0003_keen_slyde",
+      "breakpoints": true
     }
   ]
 }

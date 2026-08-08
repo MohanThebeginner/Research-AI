@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import AppShell from "@/components/AppShell";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import StatusTag from "@/components/ui/StatusTag";
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<any[]>([]);
@@ -50,43 +54,48 @@ export default function DocumentsPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center gap-6 p-8">
-      <h1 className="text-2xl font-bold">Documents</h1>
+    <AppShell>
+      <div className="mx-auto max-w-3xl px-8 py-10">
+        <p className="mb-1 font-mono text-xs uppercase tracking-widest text-primary">
+          Library
+        </p>
+        <h1 className="mb-8 font-display text-3xl font-semibold text-ink">Documents</h1>
 
-      <form onSubmit={handleUpload} className="flex w-80 flex-col gap-2">
-        <input
-          type="file"
-          accept=".pdf,.txt,.docx"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-        />
-        {error && <p className="text-red-500">{error}</p>}
-        <button
-          className="bg-black text-white rounded p-2"
-          type="submit"
-          disabled={uploading}
-        >
-          {uploading ? "Uploading..." : "Upload"}
-        </button>
-      </form>
+        <Card className="mb-8">
+          <form onSubmit={handleUpload} className="flex flex-col gap-3">
+            <label className="text-sm font-medium text-ink">Upload a document</label>
+            <input
+              type="file"
+              accept=".pdf,.txt,.docx"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary"
+            />
+            {error && <p className="text-sm text-danger">{error}</p>}
+            <Button type="submit" disabled={uploading} className="w-fit">
+              {uploading ? "Uploading..." : "Upload"}
+            </Button>
+          </form>
+        </Card>
 
-      <ul className="flex w-96 flex-col gap-2">
-        {documents.map((doc) => (
-          <li
-            key={doc.id}
-            className="flex items-center justify-between rounded border p-3"
-          >
-            <div>
-              <Link href={`/documents/${doc.id}`} className="font-medium underline">
-                {doc.originalName}
+        <div className="flex flex-col gap-2">
+          {documents.length === 0 && (
+            <p className="text-sm text-muted">No documents yet. Upload your first one above.</p>
+          )}
+          {documents.map((doc) => (
+            <Card key={doc.id} className="flex items-center justify-between">
+              <Link href={`/documents/${doc.id}`} className="flex items-center gap-3">
+                <span className="text-sm font-medium text-ink hover:text-primary">
+                  {doc.originalName}
+                </span>
+                <StatusTag status={doc.uploadStatus} />
               </Link>
-              <p className="text-sm text-gray-500">{doc.uploadStatus}</p>
-            </div>
-            <button className="text-red-500" onClick={() => handleDelete(doc.id)}>
-              Delete
-            </button>
-          </li>
-        ))}
-      </ul>
-    </main>
+              <Button variant="danger" onClick={() => handleDelete(doc.id)}>
+                Delete
+              </Button>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </AppShell>
   );
 }
