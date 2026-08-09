@@ -6,7 +6,7 @@ Document Intelligence • Gemini AI • RAG • PostgreSQL • pgvector • JWT 
 
 ---
 
-🌐 **Live Demo:** https://research-ai-o6fz.vercel.app
+🌐 **Live Demo:** https://research-ai-gilt.vercel.app
 
 ⚙️ **Backend API:** https://research-ai-4nsv.onrender.com
 
